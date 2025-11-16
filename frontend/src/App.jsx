@@ -242,6 +242,7 @@ function App() {
                   drivers={raceData.drivers}
                   raceData={raceData}
                   top3DriverIds={getTop3DriverIds()}
+                  currentTimeIndex={currentTimeIndex}
                 />
               </div>
 

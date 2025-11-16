@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 
-function CircularTrackMap({ driverPositions, drivers, raceData, top3DriverIds = [] }) {
+function CircularTrackMap({ driverPositions, drivers, raceData, top3DriverIds = [], currentTimeIndex = 0 }) {
   const svgRef = useRef(null);
   const [trackLength, setTrackLength] = useState(null);
 
@@ -61,8 +61,135 @@ function CircularTrackMap({ driverPositions, drivers, raceData, top3DriverIds = 
     }
   }, [raceData]);
 
+  // Helper function to parse time string (H:MM:SS) to seconds
+  const parseTimeToSeconds = (timeStr) => {
+    if (!timeStr) return 0;
+    const parts = timeStr.split(':');
+    return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+  };
+
+  // Find the fastest lap (driver ID and lap number)
+  const getFastestLapInfo = () => {
+    if (!raceData || !raceData.lap_times) return null;
+    
+    let fastestTime = null;
+    let fastestDriverId = null;
+    let fastestLapNum = null;
+    
+    Object.entries(raceData.lap_times).forEach(([driverId, lapTimes]) => {
+      Object.entries(lapTimes).forEach(([lapNum, lapTime]) => {
+        if (fastestTime === null || lapTime < fastestTime) {
+          fastestTime = lapTime;
+          fastestDriverId = driverId;
+          fastestLapNum = parseInt(lapNum);
+        }
+      });
+    });
+    
+    if (fastestDriverId && fastestLapNum) {
+      return {
+        driverId: fastestDriverId,
+        lapNum: fastestLapNum,
+        lapTime: fastestTime
+      };
+    }
+    
+    return null;
+  };
+
+  // Extract telemetry for a specific driver and lap, create distance-to-time-percentage mapping
+  const createDistanceToTimeMapping = (driverId, lapNum, trackLength) => {
+    if (!raceData || !raceData.telemetry || !trackLength || trackLength <= 0) return null;
+    
+    const lapTelemetry = [];
+    let lapStartIndex = -1;
+    let lapEndIndex = -1;
+    
+    // Find all telemetry entries for this driver on this lap
+    for (let i = 0; i < raceData.telemetry.length; i++) {
+      const entry = raceData.telemetry[i];
+      if (!entry || !entry.drivers || !entry.drivers[driverId]) continue;
+      
+      const driverPos = entry.drivers[driverId];
+      if (driverPos.lap === lapNum) {
+        if (lapStartIndex === -1) {
+          lapStartIndex = i;
+        }
+        lapEndIndex = i;
+        
+        // Store distance within lap and time
+        const distance = driverPos.distance || 0;
+        const distanceInLap = distance % trackLength;
+        lapTelemetry.push({
+          distance: distanceInLap,
+          time: entry.time,
+          index: i
+        });
+      }
+    }
+    
+    if (lapTelemetry.length === 0 || lapStartIndex === -1) return null;
+    
+    // Get start and end times for this lap
+    const startTime = parseTimeToSeconds(raceData.telemetry[lapStartIndex].time);
+    const endTime = parseTimeToSeconds(raceData.telemetry[lapEndIndex].time);
+    const lapDuration = endTime - startTime;
+    
+    if (lapDuration <= 0) return null;
+    
+    // Create mapping: distance -> time percentage (0-1)
+    // Sort by distance to ensure proper ordering
+    lapTelemetry.sort((a, b) => a.distance - b.distance);
+    
+    const distanceToTimeMap = new Map();
+    lapTelemetry.forEach((entry) => {
+      const entryTime = parseTimeToSeconds(entry.time);
+      const timeElapsed = entryTime - startTime;
+      const timePercentage = timeElapsed / lapDuration;
+      distanceToTimeMap.set(entry.distance, timePercentage);
+    });
+    
+    return {
+      map: distanceToTimeMap,
+      minDistance: lapTelemetry[0]?.distance || 0,
+      maxDistance: lapTelemetry[lapTelemetry.length - 1]?.distance || trackLength
+    };
+  };
+
+  // Get time percentage for a given distance using the mapping
+  const getTimePercentageForDistance = (distance, mapping, trackLength) => {
+    if (!mapping || !trackLength || distance === null || distance === undefined) return 0;
+    
+    const distanceInLap = distance % trackLength;
+    
+    // Find closest distance in the mapping
+    let closestDistance = null;
+    let minDiff = Infinity;
+    
+    mapping.map.forEach((timePct, mapDistance) => {
+      const diff = Math.abs(mapDistance - distanceInLap);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestDistance = mapDistance;
+      }
+    });
+    
+    if (closestDistance !== null) {
+      return mapping.map.get(closestDistance);
+    }
+    
+    // Fallback: linear interpolation if we have min/max
+    if (mapping.minDistance !== undefined && mapping.maxDistance !== undefined) {
+      // Normalize distance to 0-1 range
+      const normalizedDist = (distanceInLap - mapping.minDistance) / (mapping.maxDistance - mapping.minDistance);
+      return Math.max(0, Math.min(1, normalizedDist));
+    }
+    
+    return 0;
+  };
+
   useEffect(() => {
-    if (!svgRef.current || !driverPositions || !drivers) return;
+    if (!svgRef.current || !driverPositions || !drivers || !raceData) return;
 
     const svg = svgRef.current;
     // Use viewBox dimensions for consistent sizing
@@ -78,6 +205,25 @@ function CircularTrackMap({ driverPositions, drivers, raceData, top3DriverIds = 
 
     // Create SVG namespace
     const xmlns = 'http://www.w3.org/2000/svg';
+
+    // Get fastest lap info and create distance-to-time mapping
+    const fastestLapInfo = getFastestLapInfo();
+    if (!fastestLapInfo) {
+      // Fallback: can't calculate without fastest lap
+      return;
+    }
+
+    // Create distance-to-time percentage mapping from fastest lap telemetry
+    const distanceMapping = createDistanceToTimeMapping(
+      fastestLapInfo.driverId,
+      fastestLapInfo.lapNum,
+      trackLength
+    );
+    
+    if (!distanceMapping) {
+      // Fallback: can't create mapping
+      return;
+    }
 
     // Draw outer track circle
     const trackCircle = document.createElementNS(xmlns, 'circle');
@@ -135,8 +281,8 @@ function CircularTrackMap({ driverPositions, drivers, raceData, top3DriverIds = 
       svg.appendChild(labelText);
     });
 
-    // Draw driver positions
-    if (trackLength && trackLength > 0) {
+    // Draw driver positions using distance-to-time mapping from fastest lap
+    if (distanceMapping) {
       Object.keys(driverPositions).forEach((driverId) => {
         const position = driverPositions[driverId];
         const driver = drivers[driverId];
@@ -163,11 +309,15 @@ function CircularTrackMap({ driverPositions, drivers, raceData, top3DriverIds = 
           }
         }
 
-        // Calculate progress through lap (0-1)
+        // Calculate progress through lap based on distance-to-time mapping from fastest lap
+        // A driver at a given location will always be the same percentage through the lap
+        // regardless of their individual lap performance
         let progress = 0;
-        if (position.distance !== undefined && position.distance !== null) {
-          // Use modulo to get position within current lap
-          progress = (position.distance % trackLength) / trackLength;
+        const driverDistance = position.distance;
+        
+        if (driverDistance !== null && driverDistance !== undefined && trackLength > 0) {
+          // Use the fastest lap's distance-to-time mapping to get time percentage
+          progress = getTimePercentageForDistance(driverDistance, distanceMapping, trackLength);
         } else {
           // Skip if no distance data
           return;
@@ -214,7 +364,7 @@ function CircularTrackMap({ driverPositions, drivers, raceData, top3DriverIds = 
         svg.appendChild(text);
       });
     }
-  }, [driverPositions, drivers, trackLength, top3DriverIds]);
+  }, [driverPositions, drivers, raceData, top3DriverIds, currentTimeIndex, trackLength]);
 
   return (
     <div className="circular-track-map-container">
