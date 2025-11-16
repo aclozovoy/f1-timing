@@ -146,6 +146,37 @@ function App() {
     return raceData.telemetry[Math.floor(currentTimeIndex)]?.drivers || null;
   };
 
+  const getTop3DriverIds = () => {
+    const positions = getCurrentDriverPositions();
+    if (!positions) return [];
+    
+    // Calculate top 3 positions based on lap number first, then distance within lap
+    const sortedDrivers = Object.entries(positions)
+      .filter(([_, pos]) => {
+        return (pos.lap !== null && pos.lap !== undefined) || 
+               (pos.distance !== null && pos.distance !== undefined);
+      })
+      .sort(([_, posA], [__, posB]) => {
+        const lapA = posA.lap || 0;
+        const lapB = posB.lap || 0;
+        const distA = posA.distance || 0;
+        const distB = posB.distance || 0;
+        
+        // First sort by lap number (higher lap = ahead)
+        if (lapA !== lapB) {
+          return lapB - lapA;
+        }
+        
+        // If on same lap, sort by distance (higher distance = ahead)
+        return distB - distA;
+      })
+      .slice(0, 3)
+      .map(([driverId]) => driverId);
+    
+    return sortedDrivers;
+  };
+
+
   const getCurrentTime = () => {
     if (!raceData || !raceData.telemetry || currentTimeIndex >= raceData.telemetry.length) {
       return null;
@@ -204,11 +235,13 @@ function App() {
                   trackData={trackData}
                   driverPositions={getCurrentDriverPositions()}
                   drivers={raceData.drivers}
+                  top3DriverIds={getTop3DriverIds()}
                 />
                 <CircularTrackMap
                   driverPositions={getCurrentDriverPositions()}
                   drivers={raceData.drivers}
                   raceData={raceData}
+                  top3DriverIds={getTop3DriverIds()}
                 />
               </div>
 

@@ -130,6 +130,46 @@ function RaceInfo({ raceData, currentTimeIndex }) {
             sortedDrivers.map(([driverId, position], index) => {
               const driver = raceData.drivers[driverId];
               const positionNum = index + 1;
+              
+              // Get driver's last completed lap time
+              // Find the highest lap number with a lap time (most recent completed lap)
+              const driverLapTimes = raceData.lap_times?.[driverId] || {};
+              const driverCurrentLap = position.lap || 0;
+              
+              let lastLapTime = null;
+              let lastLapNumber = 0;
+              
+              if (driverCurrentLap > 0 && Object.keys(driverLapTimes).length > 0) {
+                // Check current lap first, then work backwards
+                for (let lapNum = driverCurrentLap; lapNum >= 1; lapNum--) {
+                  if (driverLapTimes[lapNum] !== undefined) {
+                    lastLapTime = driverLapTimes[lapNum];
+                    lastLapNumber = lapNum;
+                    break;
+                  }
+                }
+              }
+              
+              // Determine if this is overall fastest lap
+              const isOverallFastest = lastLapTime !== null && 
+                                       fastestLap !== null && 
+                                       Math.abs(lastLapTime - fastestLap) < 0.001; // Account for floating point
+              
+              // Determine if this is driver's personal fastest lap
+              let isPersonalFastest = false;
+              if (lastLapTime !== null && driverLapTimes) {
+                const driverFastest = Math.min(...Object.values(driverLapTimes));
+                isPersonalFastest = Math.abs(lastLapTime - driverFastest) < 0.001;
+              }
+              
+              // Determine color class
+              let lapTimeClass = 'lap-time-normal';
+              if (isOverallFastest) {
+                lapTimeClass = 'lap-time-fastest';
+              } else if (isPersonalFastest) {
+                lapTimeClass = 'lap-time-personal';
+              }
+              
               return (
                 <div key={driverId} className="position-item">
                   <span className="position-number">{positionNum}</span>
@@ -140,6 +180,11 @@ function RaceInfo({ raceData, currentTimeIndex }) {
                   <span className="position-driver-name">
                     {driver?.name || `Driver ${driverId}`}
                   </span>
+                  {lastLapTime !== null && (
+                    <span className={`position-lap-time ${lapTimeClass}`}>
+                      {formatLapTime(lastLapTime)}
+                    </span>
+                  )}
                 </div>
               );
             })

@@ -238,6 +238,26 @@ body {
   flex: 1;
 }
 
+.position-lap-time {
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  padding-left: 0.75rem;
+}
+
+.lap-time-fastest {
+  color: #a855f7;
+}
+
+.lap-time-personal {
+  color: #00ff00;
+}
+
+.lap-time-normal {
+  color: #e0e0e0;
+}
+
 .fastest-lap {
   display: flex;
   flex-direction: column;

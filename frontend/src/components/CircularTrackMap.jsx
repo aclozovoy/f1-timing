@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 
-function CircularTrackMap({ driverPositions, drivers, raceData }) {
+function CircularTrackMap({ driverPositions, drivers, raceData, top3DriverIds = [] }) {
   const svgRef = useRef(null);
   const [trackLength, setTrackLength] = useState(null);
 
@@ -143,6 +143,26 @@ function CircularTrackMap({ driverPositions, drivers, raceData }) {
         
         if (!position || !driver) return;
 
+        // Determine if this driver is in top 3 and get their position
+        const top3Index = top3DriverIds.indexOf(driverId);
+        const isTop3 = top3Index !== -1;
+        
+        // Get medal colors: gold (1st), silver (2nd), bronze (3rd)
+        let outlineColor = '#fff';
+        let textColor = '#fff';
+        if (isTop3) {
+          if (top3Index === 0) {
+            outlineColor = '#FFD700'; // Gold
+            textColor = '#FFD700';
+          } else if (top3Index === 1) {
+            outlineColor = '#C0C0C0'; // Silver
+            textColor = '#C0C0C0';
+          } else if (top3Index === 2) {
+            outlineColor = '#CD7F32'; // Bronze
+            textColor = '#CD7F32';
+          }
+        }
+
         // Calculate progress through lap (0-1)
         let progress = 0;
         if (position.distance !== undefined && position.distance !== null) {
@@ -166,30 +186,35 @@ function CircularTrackMap({ driverPositions, drivers, raceData }) {
         const driverX = centerX + Math.cos(angleRad) * radius;
         const driverY = centerY + Math.sin(angleRad) * radius;
 
-        // Draw driver dot
+        // Draw driver dot (team color fill, medal color outline for top 3)
         const circle = document.createElementNS(xmlns, 'circle');
         circle.setAttribute('cx', driverX);
         circle.setAttribute('cy', driverY);
         circle.setAttribute('r', '10');
         circle.setAttribute('fill', driver.color || '#808080');
-        circle.setAttribute('stroke', '#fff');
-        circle.setAttribute('stroke-width', '2');
+        circle.setAttribute('stroke', outlineColor);
+        circle.setAttribute('stroke-width', isTop3 ? '3' : '2');
         svg.appendChild(circle);
 
-        // Draw driver number/name label
+        // Draw driver name abbreviation (use first 3 letters or initials)
+        const driverName = driver.name || driverId;
+        const nameAbbr = driverName.length > 3 
+          ? driverName.split(' ').map(n => n[0]).join('').substring(0, 3)
+          : driverName.substring(0, 3);
+        
         const text = document.createElementNS(xmlns, 'text');
         const labelOffset = 15; // Reduced to ensure labels fit within viewBox
         text.setAttribute('x', driverX + (Math.cos(angleRad) * labelOffset));
         text.setAttribute('y', driverY + (Math.sin(angleRad) * labelOffset));
         text.setAttribute('font-size', '12');
-        text.setAttribute('fill', '#fff');
+        text.setAttribute('fill', textColor);
         text.setAttribute('font-weight', 'bold');
         text.setAttribute('text-anchor', 'middle');
-        text.textContent = driver.name || driverId;
+        text.textContent = nameAbbr.toUpperCase();
         svg.appendChild(text);
       });
     }
-  }, [driverPositions, drivers, trackLength]);
+  }, [driverPositions, drivers, trackLength, top3DriverIds]);
 
   return (
     <div className="circular-track-map-container">
