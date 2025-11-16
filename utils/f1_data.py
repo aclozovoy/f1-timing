@@ -84,6 +84,7 @@ def get_race_data(year, gp, session_type='R'):
         data = cached_data['data']
         # Check if cached data has old format (absolute times instead of relative)
         # Old format won't have 'total_duration' field, or first time entry will be absolute timestamp
+        # Also check for new fields: total_laps and lap_times
         if 'total_duration' in data and data.get('telemetry') and len(data['telemetry']) > 0:
             # Check if first time entry looks like absolute time (contains date) vs relative (timedelta format)
             first_time = data['telemetry'][0].get('time', '')
@@ -91,11 +92,17 @@ def get_race_data(year, gp, session_type='R'):
             # Absolute timestamps typically have 'T' (ISO format) or are longer than 19 chars (datetime string)
             # Relative times are short like "0:00:00" or "1:01:01"
             is_absolute = 'T' in first_time or (len(first_time) > 19) or (len(first_time) > 10 and first_time.count(':') >= 2 and '-' in first_time)
-            if is_absolute:
-                print(f"Detected old cache format for {year} {gp} (absolute time: '{first_time}'), regenerating with relative times...")
+            # Check if new fields are missing (indicates old cache format)
+            has_new_fields = 'total_laps' in data and 'lap_times' in data
+            
+            if is_absolute or not has_new_fields:
+                if is_absolute:
+                    print(f"Detected old cache format for {year} {gp} (absolute time: '{first_time}'), regenerating...")
+                else:
+                    print(f"Detected old cache format for {year} {gp} (missing total_laps/lap_times), regenerating...")
                 # Don't return cached data, regenerate it
             else:
-                # New format with relative times, return it
+                # New format with relative times and new fields, return it
                 print(f"Using cached data for {year} {gp} (first time: '{first_time}')")
                 return data
         elif 'total_duration' not in data:
@@ -272,6 +279,37 @@ def get_race_data(year, gp, session_type='R'):
         except Exception as e:
             print(f"Could not calculate track length: {e}")
         
+        # Get total number of laps (from the maximum lap number completed)
+        total_laps = 0
+        lap_times = {}  # Store lap times for fastest lap calculation
+        try:
+            all_laps = session.laps
+            if len(all_laps) > 0:
+                total_laps = int(all_laps['LapNumber'].max())
+            
+            # Get lap times for each driver (for fastest lap calculation)
+            for driver in drivers:
+                try:
+                    driver_laps = session.laps.pick_driver(driver)
+                    driver_lap_times = {}
+                    for _, lap in driver_laps.iterrows():
+                        lap_num = int(lap['LapNumber'])
+                        # Get lap time if available
+                        if 'LapTime' in lap and pd.notna(lap['LapTime']):
+                            lap_time = lap['LapTime']
+                            # Convert to total seconds
+                            if isinstance(lap_time, pd.Timedelta):
+                                lap_time_seconds = lap_time.total_seconds()
+                            else:
+                                lap_time_seconds = float(lap_time)
+                            driver_lap_times[lap_num] = lap_time_seconds
+                    if driver_lap_times:
+                        lap_times[driver] = driver_lap_times
+                except Exception:
+                    continue
+        except Exception as e:
+            print(f"Could not calculate total laps or lap times: {e}")
+        
         result = {
             'year': year,
             'gp': gp,
@@ -281,7 +319,9 @@ def get_race_data(year, gp, session_type='R'):
             'start_time': str(start_time),
             'end_time': str(end_time),
             'total_duration': total_duration_str,  # For display as total time (H:MM:SS format)
-            'track_length': track_length  # Track length in meters
+            'track_length': track_length,  # Track length in meters
+            'total_laps': total_laps,  # Total number of laps in the race
+            'lap_times': lap_times  # Lap times by driver and lap number
         }
         
         # Save to cache for future use

@@ -3,6 +3,7 @@ import RaceSelector from './components/RaceSelector';
 import TrackMap from './components/TrackMap';
 import CircularTrackMap from './components/CircularTrackMap';
 import PlaybackControls from './components/PlaybackControls';
+import RaceInfo from './components/RaceInfo';
 import { getRaces, getRaceData, getTrackCoordinates } from './services/api';
 
 function App() {
@@ -189,16 +190,23 @@ function App() {
 
         {raceData && trackData && (
           <>
-            <div className="track-maps-container">
-              <TrackMap
-                trackData={trackData}
-                driverPositions={getCurrentDriverPositions()}
-                drivers={raceData.drivers}
-              />
-              <CircularTrackMap
-                driverPositions={getCurrentDriverPositions()}
-                drivers={raceData.drivers}
+            <div className="race-content-container">
+              <div className="track-maps-container">
+                <TrackMap
+                  trackData={trackData}
+                  driverPositions={getCurrentDriverPositions()}
+                  drivers={raceData.drivers}
+                />
+                <CircularTrackMap
+                  driverPositions={getCurrentDriverPositions()}
+                  drivers={raceData.drivers}
+                  raceData={raceData}
+                />
+              </div>
+
+              <RaceInfo
                 raceData={raceData}
+                currentTimeIndex={currentTimeIndex}
               />
             </div>
 

@@ -83,10 +83,20 @@ body {
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+.race-content-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+  align-items: start;
+  width: 100%;
+}
+
 .track-maps-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
+  grid-column: 1 / 2;
+  width: 100%;
 }
 
 .track-map-container {
@@ -125,7 +135,125 @@ body {
   border-radius: 8px;
 }
 
+.race-info {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  grid-column: 2 / 3;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.race-info-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.race-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.race-info-subtitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #555;
+  margin: 0;
+}
+
+.race-info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.race-info-label {
+  font-weight: 600;
+  color: #666;
+}
+
+.race-info-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #333;
+  font-variant-numeric: tabular-nums;
+}
+
+.positions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.position-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+
+.position-number {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #667eea;
+  min-width: 30px;
+  text-align: center;
+}
+
+.position-driver-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #000;
+  flex-shrink: 0;
+}
+
+.position-driver-name {
+  font-weight: 600;
+  color: #333;
+  flex: 1;
+}
+
+.fastest-lap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #f0f7ff;
+  border-radius: 8px;
+  border: 2px solid #667eea;
+}
+
+.fastest-lap-time {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #667eea;
+  font-variant-numeric: tabular-nums;
+}
+
+.fastest-lap-driver {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #555;
+}
+
 @media (max-width: 1200px) {
+  .race-content-container {
+    grid-template-columns: 1fr;
+  }
+  
   .track-maps-container {
     grid-template-columns: 1fr;
   }
