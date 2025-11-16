@@ -27,6 +27,28 @@ docker-compose up --build
 http://localhost:5000
 ```
 
+## Pre-loading Season Data
+
+To pre-load all 2025 season data into the cache (so it doesn't need to be fetched from the API each time):
+
+```bash
+# Activate virtual environment (if using one)
+source venv/bin/activate  # On macOS/Linux
+# or
+venv\Scripts\activate  # On Windows
+
+# Run the preload script
+python preload_season_data.py
+```
+
+This will:
+- Fetch race data for all available 2025 races
+- Fetch track coordinates for each race
+- Save everything to the `data_cache/` directory
+- Future runs of the app will use cached data instead of making API calls
+
+**Note:** This may take a while depending on your internet connection and how many races are available. The script will show progress for each race.
+
 ## Local Development
 
 ### Backend Setup

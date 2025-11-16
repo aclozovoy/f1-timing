@@ -19,7 +19,31 @@ GP_2025 = [
 ]
 
 def get_available_races():
-    """Get list of available 2025 races"""
+    """Get list of available 2025 races - with caching"""
+    import json
+    from datetime import datetime, timedelta
+    
+    # Cache file for race list
+    cache_path = os.path.join(os.path.dirname(__file__), '..', 'data_cache', 'available_races.json')
+    
+    # Check if cache exists and is valid (30 days - race list doesn't change often)
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, 'r') as f:
+                cached = json.load(f)
+                cache_time = datetime.fromisoformat(cached.get('cached_at', '2000-01-01'))
+                # Use cached data if it's less than 30 days old (or if it exists, use it indefinitely for stability)
+                if (datetime.now() - cache_time) < timedelta(days=30):
+                    print(f"Loaded race list from cache ({len(cached.get('races', []))} races)")
+                    return cached.get('races', [])
+                else:
+                    # Cache is old but still exists - use it anyway to avoid API calls
+                    print(f"Using cached race list (may be outdated, {len(cached.get('races', []))} races)")
+                    return cached.get('races', [])
+        except Exception as e:
+            print(f"Error loading race list cache: {e}")
+    
+    # If not cached or cache invalid, fetch races
     races = []
     year = 2025
     
@@ -38,6 +62,18 @@ def get_available_races():
             # Race not available yet, skip
             continue
     
+    # Save to cache
+    try:
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        with open(cache_path, 'w') as f:
+            json.dump({
+                'cached_at': datetime.now().isoformat(),
+                'races': races
+            }, f, indent=2)
+        print(f"Saved race list to cache ({len(races)} races)")
+    except Exception as e:
+        print(f"Error saving race list cache: {e}")
+    
     return races
 
 def get_race_data(year, gp, session_type='R'):
@@ -45,7 +81,29 @@ def get_race_data(year, gp, session_type='R'):
     # Try to load from cache first
     cached_data = load_from_cache(year, gp, session_type)
     if cached_data:
-        return cached_data['data']
+        data = cached_data['data']
+        # Check if cached data has old format (absolute times instead of relative)
+        # Old format won't have 'total_duration' field, or first time entry will be absolute timestamp
+        if 'total_duration' in data and data.get('telemetry') and len(data['telemetry']) > 0:
+            # Check if first time entry looks like absolute time (contains date) vs relative (timedelta format)
+            first_time = data['telemetry'][0].get('time', '')
+            # If it looks like an absolute timestamp (has 'T' or looks like a full datetime), it's old format
+            # Absolute timestamps typically have 'T' (ISO format) or are longer than 19 chars (datetime string)
+            # Relative times are short like "0:00:00" or "1:01:01"
+            is_absolute = 'T' in first_time or (len(first_time) > 19) or (len(first_time) > 10 and first_time.count(':') >= 2 and '-' in first_time)
+            if is_absolute:
+                print(f"Detected old cache format for {year} {gp} (absolute time: '{first_time}'), regenerating with relative times...")
+                # Don't return cached data, regenerate it
+            else:
+                # New format with relative times, return it
+                print(f"Using cached data for {year} {gp} (first time: '{first_time}')")
+                return data
+        elif 'total_duration' not in data:
+            # Old format without total_duration field, regenerate
+            print(f"Detected old cache format (no total_duration) for {year} {gp}, regenerating...")
+        else:
+            # Has total_duration but no telemetry or empty, return it anyway
+            return data
     
     # If not in cache, process the data
     try:
@@ -122,9 +180,11 @@ def get_race_data(year, gp, session_type='R'):
         current_time = start_time
         interval = timedelta(seconds=1.0)  # 1 second intervals
         max_duration = end_time - start_time
-        max_samples = min(int(max_duration.total_seconds()), 3600)  # Max 1 hour of data
+        # Remove 1-hour limit - allow full race duration (races can be 1.5-2+ hours)
+        max_samples = int(max_duration.total_seconds())
         
         sample_count = 0
+        first_entry_added = False
         while current_time <= end_time and sample_count < max_samples:
             driver_positions = {}
             
@@ -149,14 +209,68 @@ def get_race_data(year, gp, session_type='R'):
                 except Exception:
                     pass
             
-            if driver_positions:
+            # Always add first entry at 0:00:00, even if no driver positions (to ensure race starts at 0)
+            # For subsequent entries, only add if we have driver positions
+            if sample_count == 0 or driver_positions:
+                # Calculate relative time from race start (for display as 00:00:00)
+                # Always set first entry to exactly timedelta(0) to ensure it starts at 0:00:00
+                if sample_count == 0:
+                    relative_time = timedelta(0)
+                else:
+                    relative_time = current_time - start_time
+                
+                # Format time consistently: convert to total seconds and format as H:MM:SS
+                # This ensures all times use the same format (no "days" prefix inconsistency)
+                total_seconds = int(relative_time.total_seconds())
+                hours = total_seconds // 3600
+                minutes = (total_seconds % 3600) // 60
+                seconds = total_seconds % 60
+                time_str = f"{hours}:{minutes:02d}:{seconds:02d}"
+                
                 telemetry_data.append({
-                    'time': str(current_time),
-                    'drivers': driver_positions
+                    'time': time_str,
+                    'drivers': driver_positions if driver_positions else {}
                 })
+                first_entry_added = True
+                
+                # Debug: log first few entries
+                if sample_count < 3:
+                    print(f"  Entry {sample_count}: time='{time_str}', drivers={len(driver_positions)}")
             
             current_time += interval
             sample_count += 1
+        
+        # Calculate total duration for display
+        total_duration = end_time - start_time
+        # Format total duration consistently as H:MM:SS
+        total_seconds = int(total_duration.total_seconds())
+        total_hours = total_seconds // 3600
+        total_minutes = (total_seconds % 3600) // 60
+        total_secs = total_seconds % 60
+        total_duration_str = f"{total_hours}:{total_minutes:02d}:{total_secs:02d}"
+        
+        # Calculate track length from lap data
+        track_length = None
+        try:
+            # Get track length from the first driver's first lap
+            if len(drivers) > 0:
+                driver = drivers[0]
+                driver_laps = session.laps.pick_driver(driver)
+                if len(driver_laps) > 0:
+                    first_lap = driver_laps.iloc[0]
+                    # Try to get track length from lap distance
+                    if 'LapDistance' in first_lap:
+                        track_length = float(first_lap['LapDistance'])
+                    # Alternative: calculate from telemetry distance range in first lap
+                    elif len(driver_telemetry[driver]) > 0:
+                        first_lap_tel = driver_telemetry[driver][driver_telemetry[driver]['LapNumber'] == first_lap['LapNumber']]
+                        if len(first_lap_tel) > 0 and 'Distance' in first_lap_tel.columns:
+                            distances = first_lap_tel['Distance'].dropna()
+                            if len(distances) > 0:
+                                # Track length is the maximum distance in the first lap
+                                track_length = float(distances.max())
+        except Exception as e:
+            print(f"Could not calculate track length: {e}")
         
         result = {
             'year': year,
@@ -165,7 +279,9 @@ def get_race_data(year, gp, session_type='R'):
             'drivers': driver_info,
             'telemetry': telemetry_data,
             'start_time': str(start_time),
-            'end_time': str(end_time)
+            'end_time': str(end_time),
+            'total_duration': total_duration_str,  # For display as total time (H:MM:SS format)
+            'track_length': track_length  # Track length in meters
         }
         
         # Save to cache for future use

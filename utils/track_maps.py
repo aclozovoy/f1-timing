@@ -118,10 +118,11 @@ def normalize_coordinates(track_path):
     scale = max(scale_x, scale_y)
     
     # Normalize to -1 to 1 range (can be scaled in frontend)
+    # Invert x-axis to fix coordinate system orientation
     normalized_path = []
     for point in track_path:
         normalized_path.append({
-            'x': (point['x'] - center_x) / scale if scale > 0 else 0,
+            'x': -(point['x'] - center_x) / scale if scale > 0 else 0,  # Invert x-axis
             'y': (point['y'] - center_y) / scale if scale > 0 else 0
         })
     

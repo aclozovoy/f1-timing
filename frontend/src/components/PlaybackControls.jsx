@@ -5,6 +5,8 @@ function PlaybackControls({
   playbackSpeed,
   currentTime,
   totalTime,
+  currentIndex,
+  totalLength,
   onPlayPause,
   onFastForward,
   onRewind,
@@ -13,12 +15,30 @@ function PlaybackControls({
   const formatTime = (timeStr) => {
     if (!timeStr) return '00:00:00';
     try {
-      // Parse time string (format: "0 days 00:01:23.456789")
-      const parts = timeStr.split(' ');
-      if (parts.length > 1) {
-        const timePart = parts[parts.length - 1];
-        const [hours, minutes, seconds] = timePart.split(':');
-        return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:${Math.floor(parseFloat(seconds)).toString().padStart(2, '0')}`;
+      // New format: Simple H:MM:SS (e.g., "0:00:00", "1:23:45")
+      // Also handle old formats for backward compatibility
+      
+      // Remove "day," or "days" if present (old format)
+      let cleanStr = timeStr.replace(/^\d+\s+day(s)?,\s*/, '');
+      
+      // Check if it's the pandas format with "days" (old format)
+      const parts = cleanStr.split(' ');
+      let timePart;
+      if (parts.length > 1 && parts[0].match(/^\d+$/)) {
+        // Format: "0 days 00:01:23.456789" (old format)
+        timePart = parts[parts.length - 1];
+      } else {
+        // Format: "0:00:00" or "1:01:01" (new format or old timedelta)
+        timePart = cleanStr;
+      }
+      
+      const [hours, minutes, seconds] = timePart.split(':');
+      if (hours && minutes && seconds) {
+        // Pad hours to 2 digits, ensure minutes and seconds are 2 digits
+        const h = hours.padStart(2, '0');
+        const m = minutes.padStart(2, '0');
+        const s = Math.floor(parseFloat(seconds)).toString().padStart(2, '0');
+        return `${h}:${m}:${s}`;
       }
       return timeStr;
     } catch (e) {
@@ -27,6 +47,11 @@ function PlaybackControls({
   };
 
   const getProgress = () => {
+    // Use index-based calculation for more reliable progress
+    if (totalLength && totalLength > 0 && currentIndex !== undefined && currentIndex !== null) {
+      return (currentIndex / totalLength) * 100;
+    }
+    // Fallback to time-based calculation
     if (!currentTime || !totalTime) return 0;
     try {
       const current = parseTimeString(currentTime);
@@ -39,10 +64,27 @@ function PlaybackControls({
 
   const parseTimeString = (timeStr) => {
     try {
-      const parts = timeStr.split(' ');
-      if (parts.length > 1) {
-        const timePart = parts[parts.length - 1];
-        const [hours, minutes, seconds] = timePart.split(':');
+      if (!timeStr) return 0;
+      
+      // New format: Simple H:MM:SS (e.g., "0:00:00", "1:23:45")
+      // Also handle old formats for backward compatibility
+      
+      // Remove "day," or "days" if present (old format)
+      let cleanStr = timeStr.replace(/^\d+\s+day(s)?,\s*/, '');
+      
+      // Check if it's the pandas format with "days" (old format)
+      const parts = cleanStr.split(' ');
+      let timePart;
+      if (parts.length > 1 && parts[0].match(/^\d+$/)) {
+        // Format: "0 days 00:01:23.456789" (old format)
+        timePart = parts[parts.length - 1];
+      } else {
+        // Format: "0:00:00" or "1:01:01" (new format or old timedelta)
+        timePart = cleanStr;
+      }
+      
+      const [hours, minutes, seconds] = timePart.split(':');
+      if (hours && minutes && seconds) {
         return parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseFloat(seconds);
       }
       return 0;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import RaceSelector from './components/RaceSelector';
 import TrackMap from './components/TrackMap';
+import CircularTrackMap from './components/CircularTrackMap';
 import PlaybackControls from './components/PlaybackControls';
 import { getRaces, getRaceData, getTrackCoordinates } from './services/api';
 
@@ -154,7 +155,8 @@ function App() {
     if (!raceData || !raceData.telemetry || raceData.telemetry.length === 0) {
       return null;
     }
-    return raceData.telemetry[raceData.telemetry.length - 1]?.time || raceData.end_time || null;
+    // Use total_duration if available, otherwise use last telemetry time
+    return raceData.total_duration || raceData.telemetry[raceData.telemetry.length - 1]?.time || null;
   };
 
   return (
@@ -187,17 +189,26 @@ function App() {
 
         {raceData && trackData && (
           <>
-            <TrackMap
-              trackData={trackData}
-              driverPositions={getCurrentDriverPositions()}
-              drivers={raceData.drivers}
-            />
+            <div className="track-maps-container">
+              <TrackMap
+                trackData={trackData}
+                driverPositions={getCurrentDriverPositions()}
+                drivers={raceData.drivers}
+              />
+              <CircularTrackMap
+                driverPositions={getCurrentDriverPositions()}
+                drivers={raceData.drivers}
+                raceData={raceData}
+              />
+            </div>
 
             <PlaybackControls
               isPlaying={isPlaying}
               playbackSpeed={playbackSpeed}
               currentTime={getCurrentTime()}
               totalTime={getTotalTime()}
+              currentIndex={currentTimeIndex}
+              totalLength={raceData.telemetry ? raceData.telemetry.length : 0}
               onPlayPause={handlePlayPause}
               onFastForward={handleFastForward}
               onRewind={handleRewind}

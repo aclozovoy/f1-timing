@@ -31,16 +31,22 @@ function TrackMap({ trackData, driverPositions, drivers }) {
     const rangeX = maxX - minX || 1;
     const rangeY = maxY - minY || 1;
     const scale = Math.min(width / rangeX, height / rangeY) * 0.9;
-    const offsetX = (width - (maxX - minX) * scale) / 2 - minX * scale;
-    const offsetY = (height - (maxY - minY) * scale) / 2 - minY * scale;
+    // Center the track in the viewport
+    // When we invert coordinates, we want 0 to map to the center of the viewport
+    // So: x = -normalizedX * scale + width/2
+    const offsetX = width / 2;
+    const offsetY = height / 2;
 
     // Draw track path
     const pathElement = document.createElementNS(xmlns, 'path');
     let pathData = '';
     
     for (let i = 0; i < trackPath.length; i++) {
-      const x = trackPath[i].x * scale + offsetX;
-      const y = trackPath[i].y * scale + offsetY;
+      // Invert both X and Y to match the correct orientation
+      // X needs to be inverted (like in the plot script)
+      // Y needs to be inverted because SVG Y increases downward
+      const x = -trackPath[i].x * scale + offsetX;
+      const y = -trackPath[i].y * scale + offsetY;
       if (i === 0) {
         pathData += `M ${x} ${y}`;
       } else {
@@ -72,10 +78,12 @@ function TrackMap({ trackData, driverPositions, drivers }) {
             position.y !== undefined && position.y !== null &&
             trackData.center && trackData.scale) {
           // Use actual coordinates, normalize them using track data
-          const normalizedX = (position.x - trackData.center.x) / trackData.scale;
+          // Normalize coordinates (backend already inverted X during normalization)
+          const normalizedX = -(position.x - trackData.center.x) / trackData.scale;
           const normalizedY = (position.y - trackData.center.y) / trackData.scale;
-          x = normalizedX * scale + offsetX;
-          y = normalizedY * scale + offsetY;
+          // Invert both X and Y to match track path orientation
+          x = -normalizedX * scale + offsetX;
+          y = -normalizedY * scale + offsetY;
         } else if (position.distance !== undefined && position.distance !== null) {
           // Fallback: use distance along track (simplified)
           // This is a rough approximation - ideally we'd map distance to track position
@@ -83,8 +91,9 @@ function TrackMap({ trackData, driverPositions, drivers }) {
           const trackLength = trackPath.length;
           const index = Math.floor((distance % trackLength) / trackLength * trackPath.length);
           const point = trackPath[Math.min(index, trackPath.length - 1)];
-          x = point.x * scale + offsetX;
-          y = point.y * scale + offsetY;
+          // Invert both X and Y to match track path orientation
+          x = -point.x * scale + offsetX;
+          y = -point.y * scale + offsetY;
         } else {
           // Skip if no valid position data
           return;

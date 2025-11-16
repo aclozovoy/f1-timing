@@ -83,6 +83,12 @@ body {
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+.track-maps-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
 .track-map-container {
   background: white;
   padding: 2rem;
@@ -99,6 +105,30 @@ body {
   height: 600px;
   background: #f8f9fa;
   border-radius: 8px;
+}
+
+.circular-track-map-container {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  min-height: 600px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.circular-track-map {
+  width: 100%;
+  height: 600px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+@media (max-width: 1200px) {
+  .track-maps-container {
+    grid-template-columns: 1fr;
+  }
 }
 
 .playback-controls {
