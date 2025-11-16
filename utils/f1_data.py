@@ -40,7 +40,7 @@ def get_available_races():
     return races
 
 def get_race_data(year, gp, session_type='R'):
-    """Get processed race telemetry data"""
+    """Get processed race telemetry data - optimized version"""
     try:
         session = fastf1.get_session(year, gp, session_type)
         session.load()
@@ -65,67 +65,80 @@ def get_race_data(year, gp, session_type='R'):
                     'color': '#808080'
                 }
         
-        # Get telemetry data for all drivers using a more efficient approach
+        # Pre-load telemetry for all drivers (much more efficient)
+        driver_telemetry = {}
+        for driver in drivers:
+            try:
+                # Get all telemetry for this driver
+                driver_laps = session.laps.pick_driver(driver)
+                all_tel = []
+                
+                for _, lap in driver_laps.iterrows():
+                    try:
+                        tel = lap.get_telemetry()
+                        if tel is not None and len(tel) > 0:
+                            # Add lap start time to telemetry time
+                            lap_start = lap['LapStartTime']
+                            if 'Time' in tel.columns:
+                                tel = tel.copy()
+                                tel['SessionTime'] = lap_start + pd.to_timedelta(tel['Time'])
+                                tel['LapNumber'] = lap['LapNumber']
+                                all_tel.append(tel)
+                    except Exception:
+                        continue
+                
+                if all_tel:
+                    # Combine all telemetry
+                    driver_telemetry[driver] = pd.concat(all_tel, ignore_index=True)
+                    # Sort by session time
+                    driver_telemetry[driver] = driver_telemetry[driver].sort_values('SessionTime')
+            except Exception:
+                continue
+        
+        if not driver_telemetry:
+            raise Exception("No telemetry data available for any driver")
+        
+        # Find common time range
+        all_times = []
+        for tel in driver_telemetry.values():
+            if 'SessionTime' in tel.columns:
+                all_times.extend(tel['SessionTime'].tolist())
+        
+        if not all_times:
+            raise Exception("No valid time data found")
+        
+        start_time = min(all_times)
+        end_time = max(all_times)
+        
+        # Sample at larger intervals (every 1 second) for better performance
         telemetry_data = []
-        
-        # Get all laps and sort by time
-        all_laps = session.laps
-        if len(all_laps) == 0:
-            raise Exception("No lap data available")
-        
-        # Find race start and end times
-        start_time = all_laps['LapStartTime'].min()
-        last_lap = all_laps.loc[all_laps['LapStartTime'].idxmax()]
-        end_time = last_lap['LapStartTime'] + (last_lap['LapTime'] if pd.notna(last_lap['LapTime']) else timedelta(seconds=120))
-        
-        # Sample at regular intervals (every 0.5 seconds for better performance)
         current_time = start_time
-        interval = timedelta(seconds=0.5)
-        max_samples = 10000  # Limit to prevent excessive data
+        interval = timedelta(seconds=1.0)  # 1 second intervals
+        max_duration = end_time - start_time
+        max_samples = min(int(max_duration.total_seconds()), 3600)  # Max 1 hour of data
         
         sample_count = 0
         while current_time <= end_time and sample_count < max_samples:
             driver_positions = {}
             
-            for driver in drivers:
+            for driver, tel in driver_telemetry.items():
                 try:
-                    # Get driver's laps
-                    driver_laps = all_laps.pick_driver(driver)
-                    
-                    # Find the lap that contains this time
-                    for _, lap in driver_laps.iterrows():
-                        lap_start = lap['LapStartTime']
-                        lap_time = lap['LapTime']
+                    # Find closest time point in this driver's telemetry
+                    if 'SessionTime' in tel.columns:
+                        time_diffs = (tel['SessionTime'] - current_time).abs()
+                        closest_idx = time_diffs.idxmin()
+                        closest_tel = tel.loc[closest_idx]
                         
-                        if pd.isna(lap_time):
-                            continue
-                            
-                        lap_end = lap_start + lap_time
-                        
-                        if lap_start <= current_time <= lap_end:
-                            # Get telemetry for this lap
-                            try:
-                                tel = lap.get_telemetry()
-                                if tel is not None and len(tel) > 0:
-                                    # Calculate time offset within the lap
-                                    time_offset = current_time - lap_start
-                                    
-                                    # Find closest time point in telemetry
-                                    if 'Time' in tel.columns:
-                                        tel_times = pd.to_timedelta(tel['Time'])
-                                        closest_idx = (tel_times - time_offset).abs().idxmin()
-                                        closest_tel = tel.loc[closest_idx]
-                                        
-                                        driver_positions[driver] = {
-                                            'x': float(closest_tel['X']) if 'X' in closest_tel and pd.notna(closest_tel['X']) else None,
-                                            'y': float(closest_tel['Y']) if 'Y' in closest_tel and pd.notna(closest_tel['Y']) else None,
-                                            'distance': float(closest_tel['Distance']) if 'Distance' in closest_tel and pd.notna(closest_tel['Distance']) else None,
-                                            'speed': float(closest_tel['Speed']) if 'Speed' in closest_tel and pd.notna(closest_tel['Speed']) else None,
-                                            'lap': int(lap['LapNumber'])
-                                        }
-                            except Exception:
-                                pass
-                            break
+                        # Only include if within 2 seconds
+                        time_diff = abs((closest_tel['SessionTime'] - current_time).total_seconds())
+                        if time_diff <= 2.0:
+                            driver_positions[driver] = {
+                                'x': float(closest_tel['X']) if 'X' in closest_tel and pd.notna(closest_tel['X']) else None,
+                                'y': float(closest_tel['Y']) if 'Y' in closest_tel and pd.notna(closest_tel['Y']) else None,
+                                'distance': float(closest_tel['Distance']) if 'Distance' in closest_tel and pd.notna(closest_tel['Distance']) else None,
+                                'speed': float(closest_tel['Speed']) if 'Speed' in closest_tel and pd.notna(closest_tel['Speed']) else None,
+                                'lap': int(closest_tel['LapNumber']) if 'LapNumber' in closest_tel and pd.notna(closest_tel['LapNumber']) else None
+                            }
                 except Exception:
                     pass
             

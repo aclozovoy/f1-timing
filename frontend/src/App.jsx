@@ -88,10 +88,10 @@ function App() {
       lastUpdateTimeRef.current = timestamp;
 
       // Update time index based on playback speed
-      // Each frame represents 0.5 seconds of race time (sampling interval)
+      // Each frame represents 1 second of race time (sampling interval)
       setCurrentTimeIndex((prevIndex) => {
         const maxIndex = raceData.telemetry.length - 1;
-        const newIndex = prevIndex + (deltaTime / 500); // 500ms per index
+        const newIndex = prevIndex + (deltaTime / 1000); // 1000ms per index
         
         if (newIndex >= maxIndex) {
           setIsPlaying(false);
@@ -125,7 +125,7 @@ function App() {
   };
 
   const handleRewind = () => {
-    setCurrentTimeIndex((prev) => Math.max(0, prev - 20)); // Rewind by 10 seconds (20 samples * 0.5s)
+    setCurrentTimeIndex((prev) => Math.max(0, prev - 10)); // Rewind by 10 seconds (10 samples * 1s)
   };
 
   const handleSeek = (percentage) => {

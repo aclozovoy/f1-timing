@@ -40,12 +40,12 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 RUN mkdir -p cache
 
 # Expose port
-EXPOSE 5000
+EXPOSE 5001
 
 # Set environment variables
 ENV FLASK_APP=app.py
 ENV FLASK_ENV=production
 
 # Run Flask app
-CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=5000"]
+CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=5001"]
 

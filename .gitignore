@@ -66,3 +66,4 @@ out/
 *.o
 *.a
 
+cache/
