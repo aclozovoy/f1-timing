@@ -3,4 +3,5 @@ fastf1==3.1.1
 pandas==2.1.4
 numpy==1.26.2
 flask-cors==4.0.0
+boto3==1.34.0
 

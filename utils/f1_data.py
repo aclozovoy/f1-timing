@@ -3,6 +3,7 @@ import pandas as pd
 import json
 from datetime import timedelta
 import os
+from .cache import load_from_cache, save_to_cache
 
 # Enable FastF1 cache
 CACHE_DIR = os.path.join(os.path.dirname(__file__), '..', 'cache')
@@ -40,7 +41,13 @@ def get_available_races():
     return races
 
 def get_race_data(year, gp, session_type='R'):
-    """Get processed race telemetry data - optimized version"""
+    """Get processed race telemetry data - optimized version with caching"""
+    # Try to load from cache first
+    cached_data = load_from_cache(year, gp, session_type)
+    if cached_data:
+        return cached_data['data']
+    
+    # If not in cache, process the data
     try:
         session = fastf1.get_session(year, gp, session_type)
         session.load()
@@ -151,7 +158,7 @@ def get_race_data(year, gp, session_type='R'):
             current_time += interval
             sample_count += 1
         
-        return {
+        result = {
             'year': year,
             'gp': gp,
             'session': session_type,
@@ -160,6 +167,11 @@ def get_race_data(year, gp, session_type='R'):
             'start_time': str(start_time),
             'end_time': str(end_time)
         }
+        
+        # Save to cache for future use
+        save_to_cache(year, gp, session_type, result)
+        
+        return result
     
     except Exception as e:
         raise Exception(f"Error fetching race data: {str(e)}")

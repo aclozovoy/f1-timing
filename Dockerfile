@@ -36,8 +36,8 @@ COPY utils/ ./utils/
 # Copy React build from frontend stage
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-# Create cache directory
-RUN mkdir -p cache
+# Create cache directories
+RUN mkdir -p cache data_cache
 
 # Expose port
 EXPOSE 5001

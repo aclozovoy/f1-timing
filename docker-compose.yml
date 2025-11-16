@@ -8,8 +8,9 @@ services:
     ports:
       - "5001:5001"
     volumes:
-      # Mount cache directory to persist FastF1 cache
+      # Mount cache directories to persist FastF1 cache and processed data
       - ./cache:/app/cache
+      - ./data_cache:/app/data_cache
     environment:
       - FLASK_ENV=production
     restart: unless-stopped

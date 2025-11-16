@@ -58,7 +58,8 @@ function App() {
         setRaceData(raceDataResult);
         setTrackData(trackDataResult);
       } catch (err) {
-        setError(`Failed to load race data: ${err.message}`);
+        const errorMessage = err.response?.data?.error || err.message || 'Network Error';
+        setError(`Failed to load race data: ${errorMessage}`);
         setRaceData(null);
         setTrackData(null);
       } finally {

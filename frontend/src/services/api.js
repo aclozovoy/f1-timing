@@ -1,12 +1,14 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost:5000/api';
+// In production (Docker), use relative path. In dev, use localhost:5001
+const API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost:5001/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 300000, // 5 minutes timeout for race data loading
 });
 
 export const getRaces = async () => {

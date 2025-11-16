@@ -39,6 +39,7 @@ ENV/
 pip-log.txt
 pip-delete-this-directory.txt
 .pytest_cache/
+data_cache/
 .coverage
 htmlcov/
 *.egg-info/
@@ -67,3 +68,4 @@ out/
 *.a
 
 cache/
+data_cache/

@@ -1,13 +1,32 @@
 import fastf1
 import numpy as np
 import os
+import json
+from datetime import datetime, timedelta
 
 # Enable FastF1 cache
 CACHE_DIR = os.path.join(os.path.dirname(__file__), '..', 'cache')
 fastf1.Cache.enable_cache(CACHE_DIR)
 
 def get_track_coordinates(year, gp):
-    """Extract track coordinates from FastF1"""
+    """Extract track coordinates from FastF1 with caching"""
+    # Try to load from cache first (using 'track' as session type for cache key)
+    cache_key = f"{year}_{gp}_track"
+    cache_path = os.path.join(os.path.dirname(__file__), '..', 'data_cache', f"{cache_key}.json")
+    
+    if os.path.exists(cache_path):
+        try:
+            # Check if cache is valid (30 days)
+            file_time = datetime.fromtimestamp(os.path.getmtime(cache_path))
+            if (datetime.now() - file_time) < timedelta(days=30):
+                with open(cache_path, 'r') as f:
+                    cached = json.load(f)
+                    print(f"Loaded track coordinates from cache: {year} {gp}")
+                    return cached['data']
+        except Exception:
+            pass
+    
+    # If not in cache, fetch and process
     try:
         session = fastf1.get_session(year, gp, 'R')
         session.load()
@@ -58,7 +77,23 @@ def get_track_coordinates(year, gp):
             raise Exception("No track coordinates found")
         
         # Normalize coordinates
-        return normalize_coordinates(track_path)
+        result = normalize_coordinates(track_path)
+        
+        # Save to cache
+        try:
+            os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+            with open(cache_path, 'w') as f:
+                json.dump({
+                    'cached_at': datetime.now().isoformat(),
+                    'year': year,
+                    'gp': gp,
+                    'data': result
+                }, f, indent=2)
+            print(f"Saved track coordinates to cache: {year} {gp}")
+        except Exception as e:
+            print(f"Error saving track cache: {e}")
+        
+        return result
     
     except Exception as e:
         raise Exception(f"Error fetching track coordinates: {str(e)}")
