@@ -65,11 +65,13 @@ function CircularTrackMap({ driverPositions, drivers, raceData }) {
     if (!svgRef.current || !driverPositions || !drivers) return;
 
     const svg = svgRef.current;
-    const width = svg.clientWidth || 400;
-    const height = svg.clientHeight || 400;
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = Math.min(width, height) * 0.35; // Track circle radius
+    // Use viewBox dimensions for consistent sizing
+    const viewBoxWidth = 400;
+    const viewBoxHeight = 400;
+    const centerX = viewBoxWidth / 2;
+    const centerY = viewBoxHeight / 2;
+    // Reduce radius to account for labels and markers (was 0.35, now 0.25 to leave room)
+    const radius = Math.min(viewBoxWidth, viewBoxHeight) * 0.25; // Track circle radius
     
     // Clear previous content
     svg.innerHTML = '';
@@ -176,7 +178,7 @@ function CircularTrackMap({ driverPositions, drivers, raceData }) {
 
         // Draw driver number/name label
         const text = document.createElementNS(xmlns, 'text');
-        const labelOffset = 20;
+        const labelOffset = 15; // Reduced to ensure labels fit within viewBox
         text.setAttribute('x', driverX + (Math.cos(angleRad) * labelOffset));
         text.setAttribute('y', driverY + (Math.sin(angleRad) * labelOffset));
         text.setAttribute('font-size', '12');

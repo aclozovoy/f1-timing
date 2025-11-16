@@ -7,8 +7,9 @@ function TrackMap({ trackData, driverPositions, drivers }) {
     if (!svgRef.current || !trackData || !trackData.path) return;
 
     const svg = svgRef.current;
-    const width = svg.clientWidth || 800;
-    const height = svg.clientHeight || 600;
+    // Use viewBox dimensions for consistent sizing
+    const viewBoxWidth = 800;
+    const viewBoxHeight = 600;
     
     // Clear previous content
     svg.innerHTML = '';
@@ -30,12 +31,18 @@ function TrackMap({ trackData, driverPositions, drivers }) {
 
     const rangeX = maxX - minX || 1;
     const rangeY = maxY - minY || 1;
-    const scale = Math.min(width / rangeX, height / rangeY) * 0.9;
-    // Center the track in the viewport
-    // When we invert coordinates, we want 0 to map to the center of the viewport
-    // So: x = -normalizedX * scale + width/2
-    const offsetX = width / 2;
-    const offsetY = height / 2;
+    // Use viewBox dimensions and add padding (0.85 instead of 0.9 for better fit)
+    const scale = Math.min(viewBoxWidth / rangeX, viewBoxHeight / rangeY) * 0.85;
+    // Center the track in the viewBox
+    // Calculate center of the track bounds in normalized coordinates
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    // Offset to center the track: map the track center to the viewBox center
+    // Since we invert coordinates: x = -normalizedX * scale + offset
+    // We want: -centerX * scale + offsetX = viewBoxWidth / 2
+    // So: offsetX = viewBoxWidth / 2 + centerX * scale
+    const offsetX = viewBoxWidth / 2 + centerX * scale;
+    const offsetY = viewBoxHeight / 2 + centerY * scale;
 
     // Draw track path
     const pathElement = document.createElementNS(xmlns, 'path');
