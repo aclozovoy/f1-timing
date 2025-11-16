@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  f1-timing:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      # Mount cache directory to persist FastF1 cache
+      - ./cache:/app/cache
+    environment:
+      - FLASK_ENV=production
+    restart: unless-stopped
+
