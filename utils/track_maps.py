@@ -79,6 +79,39 @@ def get_track_coordinates(year, gp):
         # Normalize coordinates
         result = normalize_coordinates(track_path)
         
+        # Try to get sector information from session
+        sectors = None
+        try:
+            # FastF1 tracks are divided into 3 sectors
+            # Sectors are typically at 1/3 and 2/3 of the track length
+            if hasattr(session, 'laps') and len(session.laps) > 0:
+                # Get first driver's first lap to find track length
+                first_driver = drivers[0]
+                driver_laps = session.laps.pick_driver(first_driver)
+                if len(driver_laps) > 0:
+                    first_lap = driver_laps.iloc[0]
+                    lap_telemetry = first_lap.get_telemetry()
+                    
+                    if lap_telemetry is not None and len(lap_telemetry) > 0 and 'Distance' in lap_telemetry.columns:
+                        track_length = float(lap_telemetry['Distance'].max())
+                        if track_length > 0:
+                            # Calculate sector positions (1/3 and 2/3 of track)
+                            # These represent the distance from start where sectors 2 and 3 begin
+                            sector2_start = track_length / 3
+                            sector3_start = 2 * track_length / 3
+                            
+                            sectors = {
+                                'sector2_start': sector2_start,
+                                'sector3_start': sector3_start,
+                                'track_length': track_length
+                            }
+                            print(f"Detected track sectors: S2 at {sector2_start:.1f}m, S3 at {sector3_start:.1f}m (track length: {track_length:.1f}m)")
+        except Exception as e:
+            print(f"Could not extract sector information: {e}")
+        
+        if sectors:
+            result['sectors'] = sectors
+        
         # Save to cache
         try:
             os.makedirs(os.path.dirname(cache_path), exist_ok=True)

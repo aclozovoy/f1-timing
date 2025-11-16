@@ -4,6 +4,7 @@ import TrackMap from './components/TrackMap';
 import CircularTrackMap from './components/CircularTrackMap';
 import PlaybackControls from './components/PlaybackControls';
 import RaceInfo from './components/RaceInfo';
+import TrackStatus from './components/TrackStatus';
 import { getRaces, getRaceData, getTrackCoordinates } from './services/api';
 
 function App() {
@@ -186,6 +187,13 @@ function App() {
           <div className="loading-message">
             Loading race data...
           </div>
+        )}
+
+        {raceData && trackData && (
+          <TrackStatus
+            raceData={raceData}
+            currentTime={getCurrentTime()}
+          />
         )}
 
         {raceData && trackData && (

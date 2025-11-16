@@ -162,6 +162,7 @@ function RaceInfo({ raceData, currentTimeIndex }) {
           <div className="fastest-lap">No lap time data available</div>
         )}
       </div>
+
     </div>
   );
 }

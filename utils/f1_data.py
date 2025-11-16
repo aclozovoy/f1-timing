@@ -310,6 +310,81 @@ def get_race_data(year, gp, session_type='R'):
         except Exception as e:
             print(f"Could not calculate total laps or lap times: {e}")
         
+        # Extract track status and race control messages
+        track_status_data = []
+        race_control_messages = []
+        
+        try:
+            # Get track status (SC, VSC, flags, etc.)
+            if hasattr(session, 'track_status') and session.track_status is not None:
+                track_status = session.track_status
+                if len(track_status) > 0:
+                    for _, row in track_status.iterrows():
+                        # Calculate relative time from race start
+                        status_time = row.get('Time', None)
+                        if status_time is not None and pd.notna(status_time):
+                            try:
+                                # Convert to relative time
+                                if isinstance(status_time, pd.Timestamp):
+                                    relative_time = status_time - start_time
+                                else:
+                                    relative_time = pd.to_timedelta(status_time) - start_time
+                                
+                                # Format time as H:MM:SS
+                                total_seconds = int(relative_time.total_seconds())
+                                if total_seconds >= 0:  # Only include times after race start
+                                    hours = total_seconds // 3600
+                                    minutes = (total_seconds % 3600) // 60
+                                    seconds = total_seconds % 60
+                                    time_str = f"{hours}:{minutes:02d}:{seconds:02d}"
+                                    
+                                    status_val = row.get('Status', '')
+                                    message = row.get('Message', '')
+                                    
+                                    track_status_data.append({
+                                        'time': time_str,
+                                        'status': str(status_val) if pd.notna(status_val) else '',
+                                        'message': str(message) if pd.notna(message) else ''
+                                    })
+                            except Exception:
+                                continue
+            
+            # Get race control messages
+            if hasattr(session, 'race_control_messages') and session.race_control_messages is not None:
+                rc_messages = session.race_control_messages
+                if len(rc_messages) > 0:
+                    for _, row in rc_messages.iterrows():
+                        # Calculate relative time from race start
+                        msg_time = row.get('Time', None)
+                        if msg_time is not None and pd.notna(msg_time):
+                            try:
+                                # Convert to relative time
+                                if isinstance(msg_time, pd.Timestamp):
+                                    relative_time = msg_time - start_time
+                                else:
+                                    relative_time = pd.to_timedelta(msg_time) - start_time
+                                
+                                # Format time as H:MM:SS
+                                total_seconds = int(relative_time.total_seconds())
+                                if total_seconds >= 0:  # Only include times after race start
+                                    hours = total_seconds // 3600
+                                    minutes = (total_seconds % 3600) // 60
+                                    seconds = total_seconds % 60
+                                    time_str = f"{hours}:{minutes:02d}:{seconds:02d}"
+                                    
+                                    category = row.get('Category', '')
+                                    message = row.get('Message', '')
+                                    
+                                    race_control_messages.append({
+                                        'time': time_str,
+                                        'category': str(category) if pd.notna(category) else '',
+                                        'message': str(message) if pd.notna(message) else ''
+                                    })
+                            except Exception:
+                                continue
+        except Exception as e:
+            print(f"Could not extract track status or race control messages: {e}")
+        
         result = {
             'year': year,
             'gp': gp,
@@ -321,7 +396,9 @@ def get_race_data(year, gp, session_type='R'):
             'total_duration': total_duration_str,  # For display as total time (H:MM:SS format)
             'track_length': track_length,  # Track length in meters
             'total_laps': total_laps,  # Total number of laps in the race
-            'lap_times': lap_times  # Lap times by driver and lap number
+            'lap_times': lap_times,  # Lap times by driver and lap number
+            'track_status': track_status_data,  # Track status changes (SC, VSC, flags)
+            'race_control_messages': race_control_messages  # Race control messages
         }
         
         # Save to cache for future use
