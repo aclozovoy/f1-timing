@@ -84,7 +84,7 @@ function CircularTrackMap({ driverPositions, drivers, raceData }) {
     trackCircle.setAttribute('cx', centerX);
     trackCircle.setAttribute('cy', centerY);
     trackCircle.setAttribute('r', radius);
-    trackCircle.setAttribute('stroke', '#333');
+    trackCircle.setAttribute('stroke', '#888');
     trackCircle.setAttribute('stroke-width', '4');
     trackCircle.setAttribute('fill', 'none');
     svg.appendChild(trackCircle);
@@ -120,7 +120,7 @@ function CircularTrackMap({ driverPositions, drivers, raceData }) {
       marker.setAttribute('y1', y1);
       marker.setAttribute('x2', x2);
       marker.setAttribute('y2', y2);
-      marker.setAttribute('stroke', '#666');
+      marker.setAttribute('stroke', '#aaa');
       marker.setAttribute('stroke-width', '2');
       svg.appendChild(marker);
 
@@ -129,7 +129,7 @@ function CircularTrackMap({ driverPositions, drivers, raceData }) {
       labelText.setAttribute('x', x2 + (Math.cos(rad) * 15));
       labelText.setAttribute('y', y2 + (Math.sin(rad) * 15));
       labelText.setAttribute('font-size', '12');
-      labelText.setAttribute('fill', '#666');
+      labelText.setAttribute('fill', '#aaa');
       labelText.setAttribute('text-anchor', 'middle');
       labelText.textContent = label;
       svg.appendChild(labelText);
@@ -172,7 +172,7 @@ function CircularTrackMap({ driverPositions, drivers, raceData }) {
         circle.setAttribute('cy', driverY);
         circle.setAttribute('r', '10');
         circle.setAttribute('fill', driver.color || '#808080');
-        circle.setAttribute('stroke', '#000');
+        circle.setAttribute('stroke', '#fff');
         circle.setAttribute('stroke-width', '2');
         svg.appendChild(circle);
 
@@ -182,7 +182,7 @@ function CircularTrackMap({ driverPositions, drivers, raceData }) {
         text.setAttribute('x', driverX + (Math.cos(angleRad) * labelOffset));
         text.setAttribute('y', driverY + (Math.sin(angleRad) * labelOffset));
         text.setAttribute('font-size', '12');
-        text.setAttribute('fill', '#000');
+        text.setAttribute('fill', '#fff');
         text.setAttribute('font-weight', 'bold');
         text.setAttribute('text-anchor', 'middle');
         text.textContent = driver.name || driverId;

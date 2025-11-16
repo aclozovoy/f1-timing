@@ -62,7 +62,7 @@ function TrackMap({ trackData, driverPositions, drivers }) {
     }
     
     pathElement.setAttribute('d', pathData);
-    pathElement.setAttribute('stroke', '#333');
+    pathElement.setAttribute('stroke', '#888');
     pathElement.setAttribute('stroke-width', '3');
     pathElement.setAttribute('fill', 'none');
     pathElement.setAttribute('stroke-linecap', 'round');
@@ -112,7 +112,7 @@ function TrackMap({ trackData, driverPositions, drivers }) {
         circle.setAttribute('cy', y);
         circle.setAttribute('r', '8');
         circle.setAttribute('fill', driver.color || '#808080');
-        circle.setAttribute('stroke', '#000');
+        circle.setAttribute('stroke', '#fff');
         circle.setAttribute('stroke-width', '2');
         svg.appendChild(circle);
 
@@ -121,7 +121,7 @@ function TrackMap({ trackData, driverPositions, drivers }) {
         text.setAttribute('x', x + 12);
         text.setAttribute('y', y);
         text.setAttribute('font-size', '12');
-        text.setAttribute('fill', '#000');
+        text.setAttribute('fill', '#fff');
         text.setAttribute('font-weight', 'bold');
         text.textContent = driver.name || driverId;
         svg.appendChild(text);
