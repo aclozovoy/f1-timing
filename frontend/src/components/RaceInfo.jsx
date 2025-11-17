@@ -49,7 +49,7 @@ function RaceInfo({ raceData, currentTimeIndex }) {
 
   const totalLaps = raceData.total_laps || 0;
 
-  // Calculate top 3 positions based on lap number first, then distance within lap
+  // Calculate all driver positions based on lap number first, then distance within lap
   // A driver on a higher lap is always ahead, regardless of distance
   const sortedDrivers = driverPositions
     .filter(([_, pos]) => {
@@ -70,8 +70,7 @@ function RaceInfo({ raceData, currentTimeIndex }) {
       
       // If on same lap, sort by distance (higher distance = ahead, closer to finish line)
       return distB - distA;
-    })
-    .slice(0, 3);
+    });
 
   // Calculate fastest lap so far (up to current lap)
   let fastestLap = null;
@@ -124,10 +123,19 @@ function RaceInfo({ raceData, currentTimeIndex }) {
       </div>
 
       <div className="race-info-section">
-        <h3 className="race-info-subtitle">Top 3 Positions</h3>
+        <h3 className="race-info-subtitle">Driver Positions</h3>
         <div className="positions-list">
           {sortedDrivers.length > 0 ? (
-            sortedDrivers.map(([driverId, position], index) => {
+            <>
+              {/* Column headers */}
+              <div className="position-item position-header">
+                <span className="position-number"></span>
+                <span className="position-driver-color"></span>
+                <span className="position-driver-name">Driver</span>
+                <span className="position-lap-time-header">Last Lap</span>
+                <span className="position-personal-best-header">Personal Best</span>
+              </div>
+              {sortedDrivers.map(([driverId, position], index) => {
               const driver = raceData.drivers[driverId];
               const positionNum = index + 1;
               
@@ -155,19 +163,43 @@ function RaceInfo({ raceData, currentTimeIndex }) {
                                        fastestLap !== null && 
                                        Math.abs(lastLapTime - fastestLap) < 0.001; // Account for floating point
               
-              // Determine if this is driver's personal fastest lap
+              // Calculate driver's personal best lap time (only up to current race lap)
+              let personalBest = null;
               let isPersonalFastest = false;
-              if (lastLapTime !== null && driverLapTimes) {
-                const driverFastest = Math.min(...Object.values(driverLapTimes));
-                isPersonalFastest = Math.abs(lastLapTime - driverFastest) < 0.001;
+              let isPersonalBestOverallFastest = false;
+              if (driverLapTimes && Object.keys(driverLapTimes).length > 0 && currentLap > 0) {
+                // Only consider laps up to the current race lap
+                const lapsUpToCurrent = [];
+                for (let lapNum = 1; lapNum <= currentLap; lapNum++) {
+                  if (driverLapTimes[lapNum] !== undefined) {
+                    lapsUpToCurrent.push(driverLapTimes[lapNum]);
+                  }
+                }
+                
+                if (lapsUpToCurrent.length > 0) {
+                  personalBest = Math.min(...lapsUpToCurrent);
+                  if (lastLapTime !== null) {
+                    isPersonalFastest = Math.abs(lastLapTime - personalBest) < 0.001;
+                  }
+                  // Check if personal best is the overall fastest lap
+                  if (personalBest !== null && fastestLap !== null) {
+                    isPersonalBestOverallFastest = Math.abs(personalBest - fastestLap) < 0.001;
+                  }
+                }
               }
               
-              // Determine color class
+              // Determine color class for last lap time
               let lapTimeClass = 'lap-time-normal';
               if (isOverallFastest) {
                 lapTimeClass = 'lap-time-fastest';
               } else if (isPersonalFastest) {
                 lapTimeClass = 'lap-time-personal';
+              }
+              
+              // Determine color class for personal best
+              let personalBestClass = 'personal-best-normal';
+              if (isPersonalBestOverallFastest) {
+                personalBestClass = 'personal-best-fastest';
               }
               
               return (
@@ -185,9 +217,15 @@ function RaceInfo({ raceData, currentTimeIndex }) {
                       {formatLapTime(lastLapTime)}
                     </span>
                   )}
+                  {personalBest !== null && (
+                    <span className={`position-personal-best ${personalBestClass}`}>
+                      {formatLapTime(personalBest)}
+                    </span>
+                  )}
                 </div>
               );
-            })
+              })}
+            </>
           ) : (
             <div className="position-item">No position data available</div>
           )}

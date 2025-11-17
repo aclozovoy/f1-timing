@@ -282,16 +282,18 @@ def get_race_data(year, gp, session_type='R'):
         # Get total number of laps (from the maximum lap number completed)
         total_laps = 0
         lap_times = {}  # Store lap times for fastest lap calculation
+        tire_compounds = {}  # Store tire compounds per driver per lap
         try:
             all_laps = session.laps
             if len(all_laps) > 0:
                 total_laps = int(all_laps['LapNumber'].max())
             
-            # Get lap times for each driver (for fastest lap calculation)
+            # Get lap times and tire compounds for each driver
             for driver in drivers:
                 try:
                     driver_laps = session.laps.pick_driver(driver)
                     driver_lap_times = {}
+                    driver_tire_compounds = {}
                     for _, lap in driver_laps.iterrows():
                         lap_num = int(lap['LapNumber'])
                         # Get lap time if available
@@ -303,8 +305,17 @@ def get_race_data(year, gp, session_type='R'):
                             else:
                                 lap_time_seconds = float(lap_time)
                             driver_lap_times[lap_num] = lap_time_seconds
+                        
+                        # Get tire compound if available
+                        if 'Compound' in lap and pd.notna(lap['Compound']):
+                            compound = str(lap['Compound']).strip()
+                            if compound:
+                                driver_tire_compounds[lap_num] = compound
+                    
                     if driver_lap_times:
                         lap_times[driver] = driver_lap_times
+                    if driver_tire_compounds:
+                        tire_compounds[driver] = driver_tire_compounds
                 except Exception:
                     continue
         except Exception as e:
@@ -397,6 +408,7 @@ def get_race_data(year, gp, session_type='R'):
             'track_length': track_length,  # Track length in meters
             'total_laps': total_laps,  # Total number of laps in the race
             'lap_times': lap_times,  # Lap times by driver and lap number
+            'tire_compounds': tire_compounds,  # Tire compounds by driver and lap number
             'track_status': track_status_data,  # Track status changes (SC, VSC, flags)
             'race_control_messages': race_control_messages  # Race control messages
         }
