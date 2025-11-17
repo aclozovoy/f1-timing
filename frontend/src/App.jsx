@@ -5,6 +5,7 @@ import CircularTrackMap from './components/CircularTrackMap';
 import PlaybackControls from './components/PlaybackControls';
 import RaceInfo from './components/RaceInfo';
 import TrackStatus from './components/TrackStatus';
+import LapTimeScatterplot from './components/LapTimeScatterplot';
 import { getRaces, getRaceData, getTrackCoordinates } from './services/api';
 
 function App() {
@@ -247,6 +248,11 @@ function App() {
               </div>
 
               <RaceInfo
+                raceData={raceData}
+                currentTimeIndex={currentTimeIndex}
+              />
+
+              <LapTimeScatterplot
                 raceData={raceData}
                 currentTimeIndex={currentTimeIndex}
               />

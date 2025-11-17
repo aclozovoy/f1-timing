@@ -93,10 +93,9 @@ body {
 }
 
 .race-content-container {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 2rem;
-  align-items: start;
   width: 100%;
 }
 
@@ -104,7 +103,6 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
-  grid-column: 1 / 2;
   width: 100%;
 }
 
@@ -142,6 +140,30 @@ body {
 .circular-track-map {
   width: 100%;
   height: 600px;
+  background: #0f0f0f;
+  border-radius: 8px;
+}
+
+.lap-time-scatterplot-container {
+  background: #1a1a1a;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  border: 1px solid #333;
+  width: 100%;
+}
+
+.scatterplot-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #e0e0e0;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.lap-time-scatterplot {
+  width: 100%;
+  height: 400px;
   background: #0f0f0f;
   border-radius: 8px;
 }
